@@ -1,0 +1,41 @@
+\name{cancer}
+\alias{cancer}
+
+\docType{data}
+
+\title{
+  Breast Retraction Times after Beast Cancer Treatments.
+}
+
+\description{ Contains the breast retraction times in months for 94
+  breast cancer patients who received either radiation therapy or
+  radiation therapy plus adjuvant chemotherapy. }
+
+\usage{cancer}
+
+\format{ A data frame with 94 observations and 3 variables:
+  
+  L: left-end points of the interval-censored retraction times;
+
+  R: right-end points of the interval-censored retraction times;
+
+ group: either \code{RT} (radiation therapy) or \code{RCT} (radiation
+ therapy plus adjuvant chemotherapy).}
+
+\source{ Finkelstein and Wolfe (1985).  }
+
+\references{ Finkelstein, D. M. and R. A. Wolfe (1985). A semiparametric
+  model for regression analysis of interval-censored failure time
+  data. \emph{Biometrics}, \bold{41}, pp.933-945.  }
+
+\seealso{ \code{\link{npsurv}}. }
+
+\examples{
+data(cancer)
+i = cancer$group == "RT"
+plot(npsurv(cancer[i,1:2]), xlim=c(0,60))
+plot(npsurv(cancer[!i,1:2]), add=TRUE, col="green3")
+}
+
+\keyword{datasets}
+

@@ -1,0 +1,171 @@
+\name{plot.Uhaz}
+\alias{plot.Uhaz}
+\alias{plot.uh}
+\alias{plothazuh}
+\alias{plotchazuh}
+\alias{plotsurvuh}
+\alias{plotdenuh}
+\alias{plotgraduh}
+
+\title{Plot Functions for U-shaped Hazard Estimation}
+
+\description{
+  
+  \code{plot.Uhaz} and \code{plot.uh} are wrapper functions that can be
+  used to invoke \code{plot.hazuh}, \code{plot.chazuh},
+  \code{plot.survuh}, \code{plot.denuh} or \code{plot.graduh}.
+
+  \code{plothazuh} plots a U-shaped hazard function.
+
+  \code{plotchazuh} plots a cumulative hazard function that has a
+  U-shaped hazard function.
+
+  \code{plotsurvuh} plots the survival function that has a U-shaped
+  hazard function.
+
+  \code{plotdenuh} plots the density function that has a U-shaped
+  hazard function.
+
+  \code{plotgraduh} plots the gradient function that has a U-shaped
+  hazard function.
+
+}
+
+\usage{
+
+\method{plot}{Uhaz}(x, ...)
+\method{plot}{uh}(x, data, fn=c("haz","grad","surv","den","chaz"), ...)
+plothazuh(h, add=FALSE, col="darkblue", lty=1, xlim, ylim,
+          lwd=2, pch=19, len=500, vert=FALSE, add.knots=TRUE,
+          xlab="Time", ylab="Hazard", ...)
+plotchazuh(h, add=FALSE, lwd=2, len=500, col="darkblue",
+           pch=19, add.knots=TRUE, vert=FALSE, xlim, ylim, ...)
+plotdenuh(h, add=FALSE, lty=1, lwd=2, col="darkblue",
+          add.knots=TRUE, pch=19, ylim, len=500, vert=FALSE, ...)
+plotsurvuh(h, add=FALSE, lty=1, lwd=2, len=500, vert=FALSE,
+           col="darkblue", pch=19, add.knots=TRUE, xlim, ylim, ...)
+plotgraduh(h, data, w=1, len=500, xlim, ylim, vert=TRUE,
+           add=FALSE, xlab="Time", ylab="Gradient",
+           col0="red3", col1="blue3", col2="green3", order=0, ...)
+}
+	    
+\arguments{
+  
+  \item{x}{an object of class \code{Uhaz}, i.e., an output of function
+    \code{Uhaz}, or an object of class \code{uh}..} 
+
+  \item{h}{an object of class \code{uh}.}
+
+  \item{data}{vector or matrix that stores observations, or an object of
+    class \code{icendata}.}
+
+  \item{w}{additional weights/multiplicities for the observations stored
+  in \code{x}.} 
+
+  \item{fn}{function to be plotted. It can be 
+
+    = \code{haz}, for hazard function;
+
+    = \code{chaz}, for cumulative hazard function;
+
+    = \code{den}, for density function;
+
+    = \code{surv}, for survival function;
+
+    = \code{gradient}, for gradient functions. 
+
+  }
+  
+  \item{xlim, ylim}{numeric vectors of length 2, giving the x and y coordinates
+    ranges.}
+  
+  \item{xlab, ylab}{x- or y-axis labels.}
+  
+  \item{add}{= \code{TRUE}, adds the curve to the existing plot;
+
+    = \code{FALSE}, plots the curve in a new one.}
+
+  \item{col}{color used for plotting the curve.}
+
+  \item{lty}{line type for plotting the curve.}
+
+  \item{lwd}{line width for plotting the curve.}
+
+  \item{len}{number of points used to plot a curve.}
+
+  \item{add.knots}{logical, indicating if knots are also plotted. }
+
+  \item{pch}{point character/type for plotting knots.}
+
+  \item{vert}{logical, indicating if grey vertical lines are plotted to
+    show the interval that separates the two discrete measures. }
+  
+  \item{col0}{color for gradient function 0, i.e., for the
+    hazard-constant part, or alpha.}
+
+  \item{col1}{color for gradient function 1, i.e., for the
+    hazard-decreasing part.}
+
+  \item{col2}{color for gradient function 1, i.e., for the
+    hazard-increasing part.}
+
+  \item{order}{= 0, the gradient functions are plotted;
+
+    = 1, their first derivatives are plotted;
+
+    = 2, their second derivatives are plotted. }
+
+  \item{...}{arguments for other graphical parameters (see \code{par}).}
+  
+}
+
+\details{
+  
+  A U-shaped hazard function is given by
+
+  \deqn{h(t) = \alpha + \sum_{j = 1}^k \nu_j(\tau_j - t)_+^p + \sum_{j
+      = 1}^{m} \mu_j (t-\eta_j)_+^p,}{     h(t) = alpha + sum_{j=1}^k nu_j (tau_j - t)_+^p 
+                  + sum_{j=1}^m mu_j (t - eta_j)_+^p,}
+
+  where \eqn{\alpha,\nu_j,\mu_j \ge 0}{alpha, nu_j, mu_j \ge 0},
+  \eqn{\tau_1 < \cdots < \tau_k \le \eta_1 < \cdots < \eta_m,}{tau_1 < ... < tau_k <= eta_1 < ... < eta_m,} and \eqn{p \ge 0}{p >= 0}.
+  
+}
+
+\author{ Yong Wang <yongwang@auckland.ac.nz>}
+
+\references{
+
+  Wang, Y. and Fani, S. (2015). Nonparametric maximum likelihood
+  computation of a U-shaped hazard function. (In preparation)
+
+}
+
+\seealso{ \code{\link{icendata}}, \code{\link{uh}}, \code{\link{npsurv}}. }
+
+\examples{
+## Angina Pectoris Survival Data
+data(ap)
+plot(r<-Uhaz(ap))              # hazard function for a convex hazard
+plot(r, fn="c")                # cumulative hazard function
+plot(r, fn="s")                # survival function
+plot(r, fn="d")                # density function
+plot(r, ap, fn="g")            # gradient functions
+plot(r, ap, fn="g", order=1)   # first derivatives of gradient functions
+plot(r, ap, fn="g", order=2)   # second derivatives of gradient functions
+
+## New Zealand Mortality in 2000
+data(nzmort)
+i = nzmort$ethnic == "maori"
+x = nzmort[i,1:2]                            # Maori mortality
+h = Uhaz(x[,1]+0.5, x[,2], deg=2)$h          # smooth U-shaped hazard
+plot(h)                        # hazard function
+plot(h, fn="d")                # density function
+plot(h, fn="s")                # survival function
+
+x2 = nzmort[!i,1:2]                          # Non-Maori mortality
+h2 = Uhaz(x2[,1]+0.5, x2[,2], deg=2)$h
+plot(h2, fn="s", add=TRUE, col="green3")
+}
+
+\keyword{ function }   % at least one, from doc/KEYWORDS

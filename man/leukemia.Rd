@@ -1,0 +1,46 @@
+\name{leukemia}
+\alias{leukemia}
+
+\docType{data}
+
+\title{ Remission Times for Acute Leukemia Patients }
+
+\description{ Contains remission times in weeks of 42 acute leukemia
+  patients, who received either the treatment of drug 6-mercaptopurine
+  or the placebo treatment. Each remission time is either exactly
+  observed or right-censored. }
+
+\usage{leukemia}
+
+\format{ A data frame with 42 observations and 3 variables:
+  
+  L: left-end points of the interval-censored remission times in weeks;
+
+  R: right-end points of the interval-censored remission times;
+
+ group: either 6-MP (6-mercaptopurine) or Placebo.}
+
+\source{ Freireich et al. (1963). }
+
+\references{ Freireich, E. O. et al. (1963). The effect of
+  6-mercaptopmine on the duration of steroid induced remission in acute
+  leukemia. \emph{Blood}, \bold{21}, 699-716. }
+
+\seealso{ \code{\link{npsurv}}. }
+
+\examples{
+data(leukemia)
+i = leukemia[,"group"] == "Placebo"
+plot(npsurv(leukemia[i,1:2]), xlim=c(0,40), col="green3") # placebo
+plot(npsurv(leukemia[!i,1:2]), add=TRUE)                  # 6-MP
+
+## Treat each remission time as interval-censored:
+x = leukemia
+ii = x[,1] == x[,2]
+x[ii,2] = x[ii,1] + 1
+plot(npsurv(x[i,1:2]), xlim=c(0,40), col="green3")        # placebo
+plot(npsurv(x[!i,1:2]), add=TRUE)                         # 6-MP
+}
+
+\keyword{datasets}
+

@@ -1,0 +1,15 @@
+Version 0.1
+
+   * Interval-censored
+   * CNM
+
+Version 0.2-0
+
+   * Uhaz
+   * Help pages written
+
+Version 0.3-3
+
+   * Formal release to CRAN
+
+(To do: HCNM, semi-parametric)
