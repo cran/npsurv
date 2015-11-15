@@ -1,7 +1,7 @@
 e887eb7d83312091f51b36bd29314674 *ChangeLog
-84e1baeb3d37bb8202b4eca258252b87 *DESCRIPTION
+90610f2c64386bd04c3f12ed6ec23053 *DESCRIPTION
 76a927e32f56c8ae1e359db61003f82c *NAMESPACE
-4acbf96a4ef4ca176a023547b56df04d *R/Uhaz.R
+554a9f6e0220a0ef88ddc54823058786 *R/Uhaz.R
 f3832048ab28b68485e87657845cf7c9 *R/icendata.R
 ab5ef3eb0dd8c1a8f6e48d9b9dec7165 *R/npsurv.R
 237be856104d680263fd4d3c68f0c604 *data/acfail.rda
@@ -16,7 +16,7 @@ b76082ce0d5021c3817f072b776fe286 *man/Deltamatrix.Rd
 e4724f174b6f1671979414ca7e806c1c *man/acfail.Rd
 be0854f4100508c8f75b4131dafd96d1 *man/ap.Rd
 a62b3b8dff2b298d03876448af084ea0 *man/cancer.Rd
-8937a2bab57fdd751d2a4343788876b0 *man/gastric.Rd
+bdc41cbd1899086d00775872b3cf4492 *man/gastric.Rd
 d8880c047e26a9d221004a307af23dc2 *man/hazuh.Rd
 11d6deb6ec1cae7f25a216acd12fbc06 *man/icendata.Rd
 cf509e6332b8f979d6f2d42b123a880d *man/idf.Rd

@@ -419,6 +419,7 @@ maxgrad = function(h, x, expdH=NULL, maxit=100, grid=100, bc=TRUE) {
   k = length(tau1) - 1
   eta1 = c(h$eta[h$eta<h$upper], h$upper)
   m = length(eta1) - 1
+  if(p < 1) grid = grid * log2(2/(p*p))
 
   ## grad1
   if(p < 0.1) {                     # optimal points
@@ -427,13 +428,16 @@ maxgrad = function(h, x, expdH=NULL, maxit=100, grid=100, bc=TRUE) {
     gpt1 = grad1(pt1, h, x, expdH)$d0
   }
   else {
-    if(p < 1) grid = grid * log2(2/(p*p))
-    u1 = seq(0, eta1[1], len=grid)
+    if(p == 1) u1 = u[u <= eta1[1]]
+    else u1 = seq(0, eta1[1], len=grid)
     if(!bc) u1 = u1[u1 < eta1[1]]
     m1 = length(u1)
     pt1 = gpt1 = numeric()
-    g = grad1(u1, h, x, expdH, order=1)
-    jd = g$d1[-m1] > 0 & g$d1[-1] < 0
+    if(p == 1) jd = rep(TRUE, m1-1)
+    else {
+      g = grad1(u1, h, x, expdH, order=1)
+      jd = g$d1[-m1] > 0 & g$d1[-1] < 0
+    }
     if(any(jd)) {
       left = u1[-m1][jd]
       right = u1[-1][jd]
@@ -448,10 +452,11 @@ maxgrad = function(h, x, expdH=NULL, maxit=100, grid=100, bc=TRUE) {
         pt1[j] = (left[j] + right[j]) * .5
         if( max(abs(pt1 - pt1.old)) <= 1e-14 * h$upper) break
       }
+      if(p == 1) pt1 = pt1[!j]
       gpt1 = grad1(pt1, h, x, expdH, order=0)$d0
     }
   }
-  i = pt1 > 0 & pt1 < tau1[k+1]
+  i = pt1 > 0 & pt1 <= tau1[k+1]
   pt1i = pt1[i]
   gpt1i = gpt1[i]
   if(k > 0 && length(pt1i) > 0) {
@@ -463,6 +468,9 @@ maxgrad = function(h, x, expdH=NULL, maxit=100, grid=100, bc=TRUE) {
     j = j + c(0,cumsum(tabulate(grp, nbins=k))[-k])
     np1 = pt1i[j]
     gnp1 = gpt1i[j]
+    j0 = gnp1 > 0
+    np1 = np1[j0]
+    gnp1 = gnp1[j0]
   }
   else np1 = gnp1 = numeric()
 
@@ -473,12 +481,16 @@ maxgrad = function(h, x, expdH=NULL, maxit=100, grid=100, bc=TRUE) {
     gpt2 = grad2(pt2, h, x, expdH)$d0
   }
   else {
-    u2 = seq(tau1[k+1], h$upper, len=grid)
+    if(p == 1) u2 = u[u >= tau1[k+1]]
+    else u2 = seq(tau1[k+1], h$upper, len=grid)
     if(!bc) u2 = u2[u2 > tau1[k+1]]
     m2 = length(u2)
     pt2 = gpt2 = numeric()
-    g = grad2(u2, h, x, expdH, order=1)
-    jd = g$d1[-m2] > 0 & g$d1[-1] < 0
+    if(p == 1) jd = rep(TRUE, m2-1)
+    else {
+      g = grad2(u2, h, x, expdH, order=1)
+      jd = g$d1[-m2] > 0 & g$d1[-1] < 0
+    }
     if(any(jd)) {
       left = u2[-m2][jd]
       right = u2[-1][jd]
@@ -493,6 +505,7 @@ maxgrad = function(h, x, expdH=NULL, maxit=100, grid=100, bc=TRUE) {
         pt2[j] = (left[j] + right[j]) * .5
         if( max(abs(pt2 - pt2.old)) <= 1e-14 * h$upper) break
       }
+      if(p == 1) pt2 = pt2[!j]
       gpt2 = grad2(pt2, h, x, expdH, order=0)$d0
     }
   }
@@ -508,6 +521,9 @@ maxgrad = function(h, x, expdH=NULL, maxit=100, grid=100, bc=TRUE) {
     j = j + c(0, cumsum(tabulate(grp, nbins=m))[-m])
     np2 = pt2i[j]
     gnp2 = gpt2i[j]
+    j0 = gnp2 > 0 
+    np2 = np2[j0]
+    gnp2 = gnp2[j0]
   }
   else np2 = gnp2 = numeric()
 
@@ -593,7 +609,7 @@ collapse = function(h, x, tol=0){
   h = uh(h$alpha, tau, nu, eta, mu, h$upper, h$deg, collapse=FALSE)
   if(tol > 0) {
     if(is.null(ll)) ll = logLikuh(h, x)
-    if(h$deg < 1) {attr(h, "ll") = ll; return(h)}
+    # if(h$deg < 1) {attr(h, "ll") = ll; return(h)}  # why?
     h2 = h
     break1 = break2 = FALSE
     repeat {
