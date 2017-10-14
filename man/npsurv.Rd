@@ -50,18 +50,24 @@ npsurv(data, w=1, maxit=100, tol=1e-6, verb=0)
   observation is the third-column value multiplied by the corresponding
   weight value in \code{w}.
 
-  The algorithm used for the computing the NPMLE is the constrained
-  Newton method (CNM) that is proposed by Wang (2008).
+  The algorithm used for computing the NPMLE is either the constrained
+  Newton method (CNM) (Wang, 2008), or the hierachical constrained
+  Newton method (HCNM) (Wang and Taylor, 2013) when there are a large
+  number of maximal intersection intervals.
 
-  Inside the function, it detects if data has only right censoring, and
+  Inside the function, it examines if data has only right censoring, and
   if so, the Kaplan-Meier estimate is computed directly by function
   \code{km}.
 
+  An interval-valued observation is either \eqn{(L_i, R_i]}{(Li, Ri]} if
+  \eqn{L_i < R_i}{Li < Ri}, or \eqn{[L_i, R_i]}{[Li, Ri]} if
+  \eqn{L_i = R_i}{Li = Ri}.
+  
 }
 
 \value{
 
-  An object of class \code{npsurv}, which is a list consisting of:
+  An object of class \code{npsurv}, which is a list with components:
   
   \item{f}{NPMLE, an object of class \code{idf}.}
   
@@ -70,6 +76,8 @@ npsurv(data, w=1, maxit=100, tol=1e-6, verb=0)
   \item{convergence}{= \code{TRUE}, converged successfully;
 
     = \code{FALSE}, maximum number of iterations reached.}
+  
+  \item{method}{method used internally, either \code{cnm} or \code{hcnm}.}
   
   \item{ll}{log-likelihood value of the NPMLE \code{f}.}
   
@@ -86,6 +94,10 @@ npsurv(data, w=1, maxit=100, tol=1e-6, verb=0)
   Wang, Y. (2008). Dimension-reduced nonparametric maximum likelihood
   computation for interval-censored data. \emph{Computational Statistics &
   Data Analysis}, \bold{52}, 2388-2402.
+
+  Wang, Y. and Taylor, S. M. (2013). Efficient computation of
+  nonparametric survival functions via a hierarchical mixture
+  formulation. \emph{Statistics and Computing}, \bold{23}, 713-725.
 
 }
 

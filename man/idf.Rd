@@ -36,7 +36,7 @@ idf(left, right, p)
 
 \details{
 
-  When left and right endpoints are equal, the intervals reduce to
+  When left and right endpoints are equal, the intervals are in fact
   points.
   
   \code{print.idf} prints an object of class \code{idf} as a three-coumn

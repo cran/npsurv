@@ -35,13 +35,13 @@ Deltamatrix(LR)
   observations, and the columns the maximal intersection intervals. A
   \code{TRUE} value of the (i,j)-th element means that the i-th
   observation covers the j-th maximal intersection interval, and a
-  \code{FALSE} value the otherwise.
+  \code{FALSE} value means the opposite.
 
 }
 
 \value{
 
-  A list consisting of:
+  A list with components:
   
   \item{left}{left endpoints of the maximal intersection intervals.}
   

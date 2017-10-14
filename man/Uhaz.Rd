@@ -78,7 +78,7 @@ Uhaz(data, w=1, deg=1, maxit=100, tol=1e-6, verb=0)
 
 \value{
 
-  An object of class \code{Uhaz}, which is a list consisting of:
+  An object of class \code{Uhaz}, which is a list with components:
   
   \item{convergence}{= \code{TRUE}, converged successfully;
 
@@ -112,8 +112,9 @@ Uhaz(data, w=1, deg=1, maxit=100, tol=1e-6, verb=0)
   of a convex bathtub-shaped hazard function. \emph{Bernoulli},
   \bold{15}, 1010-1035.
   
-  Wang, Y. and Fani, S. (2015). Nonparametric maximum likelihood
-  computation of a U-shaped hazard function. (In preparation)
+  Wang, Y. and Fani, S. (2017). Nonparametric maximum likelihood
+  computation of a U-shaped hazard function. \emph{Statistics and
+  Computing}, (in print).
 
 }
 
@@ -123,8 +124,9 @@ Uhaz(data, w=1, deg=1, maxit=100, tol=1e-6, verb=0)
 ## Interval-censored observations
 data(ap)
 (r = Uhaz(ap, deg=0))
-plot(r, ylim=c(0,.3))
+plot(r, ylim=c(0,.3), col=1)
 for(i in 1:6) plot(Uhaz(ap, deg=i/2), add=TRUE, col=i+1)
+legend(15, 0.01, paste0("deg = ", 0:6/2), lwd=2, col=1:7, xjust=1, yjust=0)
 
 ## Exact observations
 data(nzmort)
@@ -133,7 +135,7 @@ x = with(nzmort, nzmort[ethnic=="maori",])[,1:2]   # Maori mortality
 (h1 = Uhaz(x[,1]+0.5, x[,2], deg=1)$h)     # convex hazard
 (h2 <- Uhaz(x[,1]+0.5, x[,2], deg=2)$h)    # smooth U-shaped hazard
 
-plot(h0, pch=2)              # plot hazard functions
+plot(h0, pch=2)                            # plot hazard functions
 plot(h1, add=TRUE, col="green3", pch=1)
 plot(h2, add=TRUE, col="red3", pch=19)
 
@@ -146,7 +148,7 @@ plot(h0, fn="d", add=TRUE, pch=2)
 plot(h1, fn="d", add=TRUE, col="green3", pch=1)
 plot(h2, fn="d", add=TRUE, col="red3", pch=19)
 
-plot(h0, fn="s", pch=2)      # plot survivals
+plot(h0, fn="s", pch=2)                    # plot survival functions
 plot(h1, fn="s", add=TRUE, col="green3", pch=1)
 plot(h2, fn="s", add=TRUE, col="red3", pch=19)
 

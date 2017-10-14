@@ -3,22 +3,18 @@
 # ----------------------------------------------------------------------- #
 
 npsurv = function(data, w=1, maxit=100, tol=1e-6, verb=0) {
-  # plot = match.arg(plot)
   x2 = icendata(data, w)
   if(nrow(x2$o) == 0 || all(x2$o[,2] == Inf)) { # exact or right-censored only
     r0 = km(x2)
     r = list(f=r0$f, upper=max(x2$t, x2$o[,1]), convergence=TRUE, ll=r0$ll,
         maxgrad=0, numiter=1)
-    class(r) = "npsurv"
-    return(r)
+    return(structure(r, class="npsurv"))
   }
   x = rbind(cbind(x2$t, x2$t), x2$o)
   nx = nrow(x)
   w = c(x2$wt, x2$wo)
   wr = sqrt(w)
   n = sum(w)
-  L = x[,1]
-  R = x[,2]
   upper = x2$upper
   dmat = Deltamatrix(x)
   left = dmat$left
@@ -33,59 +29,72 @@ npsurv = function(data, w=1, maxit=100, tol=1e-6, verb=0) {
     jm = which.max(colSums(D[i,,drop=FALSE]))
     j[jm] = TRUE
     i[D[,jm]] = FALSE
-    if( sum(i) == 0 ){ p[j] = rep(1/sum(j), sum(j)); break }
+    if( sum(i) == 0 ) break
   }
-  P = (D %*% p)[,1]
+  p = colSums(w * D) * j
+  p = p / sum(p)
+  if(m >= 30) {                     ## Turn to HCNM
+    r = hcnm(w=w, D=D, p0=p, maxit=maxit, tol=tol, verb=verb)
+    j = r$pf > 0
+    f = idf(left[j], right[j], r$pf[j]) 
+    r = list(f=f, upper=upper, convergence=r$convergence, method="hcnm", ll=r$ll,
+             maxgrad=r$maxgrad, numiter=r$numiter)
+    return(structure(r, class="npsurv"))
+  }
+  
+  P = drop(D %*% p)
   ll = sum( w * log(P) )
   converge = FALSE
   for(i in 1:maxit) {
     p.old = p
     ll.old = ll
     S = D / P
-    d = crossprod(w, S)[1,]
+    ## d = crossprod(w, S)[1,]
+    d = colSums(w * S)
     dmax = max(d) - n
-    if(verb>0) { cat("##### Iteration", i, "#####\n")
-                 cat("Log-likelihood: ", signif(ll, 6), "\n")
-                 if(verb>1) cat("Maximum gradient: ", signif(dmax, 6), "\n")
-                 if(verb>2) {cat("Probability vector:\n"); print(p)} }
+    if(verb > 0) {
+      cat("##### Iteration", i, "#####\n")
+      cat("Log-likelihood: ", signif(ll, 6), "\n")
+    }
+    if(verb > 1) cat("Maximum gradient: ", signif(dmax, 6), "\n")
+    if(verb > 2) {cat("Probability vector:\n"); print(p)} 
     j[which(j)-1 + aggregate(d, by=list(group=cumsum(j)), which.max)[,2]] = TRUE
-    pj = nnls(rbind(wr * (S[,j,drop=FALSE] - 2), rep(1,sum(j))),
-        c(rep(0,nx),1))$x
+    pj = pnnls(wr * S[,j,drop=FALSE], wr * 2, sum=1)$x
     p[j] = pj / sum(pj)
     alpha = 1                # line search
     pd = p - p.old
     lld = sum(d * pd)
     p.alpha = p
     repeat {
-      P.alpha = (D %*% p.alpha)[,1]
+      P.alpha = drop(D %*% p.alpha)
       ll.alpha = sum(w * log(P.alpha))
       if(ll.alpha >= ll + alpha * lld * .33)
         { p = p.alpha; P = P.alpha; ll = ll.alpha; break }
-      alpha = alpha * .5
-      if(alpha < 1e-10) break
+      if((alpha <- alpha * .5) < 1e-10) break
       p.alpha = p.old + alpha * pd
     }
     j = p > 0
     if( ll <= ll.old + tol ) {converge=TRUE; break}
   }
   f = idf(left[j], right[j], p[j])
-  r = list(f=f, upper=upper, convergence=converge, ll=ll,
+  r = list(f=f, upper=upper, convergence=converge, method="cnm", ll=ll,
       maxgrad=max(crossprod(w/P, D))-n, numiter=i)
-  class(r) = "npsurv"
-  r
+  structure(r, class="npsurv")
 }
 
 # LR    matrix of intervals
 
+# An interval is either (Li, Ri] if Li < Ri, or [Li, Ri] if Li = Ri. 
+
 Deltamatrix = function(LR) {
   L = LR[,1]
   R = LR[,2]
-  ic = L != R          # inverval-censored
+  ic = L != R             # inverval-censored
   nc = sum(ic)
+  # tol = max(R[R!=Inf]) * 1e-8
   if(nc > 0) {
-    L1 = L[ic] + max(R[R!=Inf]) * 1e-8          # open left endpoint
-    R1 = R[ic]                                  # closed right endpoint
-    LRc = cbind(c(L1, R1), c(rep(0,nc), rep(1,nc)), rep(1:nc, 2))
+    L1 = L[ic] + max(R[R!=Inf]) * 1e-8       # open left endpoints
+    LRc = cbind(c(L1, R[ic]), c(rep(0,nc), rep(1,nc)), rep(1:nc, 2))
     LRc.o = LRc[order(LRc[,1]),]
     j = which(diff(LRc.o[,2]) == 1)
     left = L[ic][LRc.o[j,3]]
@@ -95,13 +104,16 @@ Deltamatrix = function(LR) {
   if(nrow(LR) - nc > 0) {
     ut = unique(L[!ic])
     jin = colSums(outer(ut, left, ">") & outer(ut, right, "<=")) > 0
-    left = c(ut, left[!jin])   # remove those that contain exact obs.
+    left = c(ut, left[!jin])     # remove those that contain exact obs.
     right = c(ut, right[!jin])
     o = order(left, right)
     left = left[o]
     right = right[o]
   }
-  D = outer(L, left, "<=") & outer(R, right, ">=")
+  ## D = outer(L, left, "<=") & outer(R, right, ">=") 
+  D = outer(L, left, "<=") & outer(R, right, ">=") &
+    (outer(L, right, "<") | outer(R, left, "=="))  
+
   dimnames(D) = names(left) = names(right) = NULL
   list(left=left, right=right, Delta=D)
 }
@@ -118,8 +130,7 @@ idf = function(left, right, p) {
   names(left) = names(right) = names(p) = NULL
   p = rep(p, length=length(left))
   f = list(left=left, right=right, p=p/sum(p))
-  class(f) = "idf"
-  f
+  structure(f, class="idf")
 }
 
 print.idf = function(x, ...) {
@@ -155,13 +166,11 @@ km = function(data, w=1) {
   list(f=f, ll=ll)
 }
 
-
 ####  Plot functions
 
 plot.npsurv = function(x, ...) plot(x$f, ...)
 
-plot.idf = function(x, data, fn=c("surv","grad"),
-    ...) {
+plot.idf = function(x, data, fn=c("surv","grad"), ...) {
   fn = match.arg(fn)
   fnR = getFunction(paste("plot",fn,"idf",sep=""))
   switch(fn, "surv" = fnR(x, ...), "grad" = fnR(x, data, ...)  )
@@ -200,7 +209,7 @@ plotgradidf = function(f, data, w=1, col1="red3", col2="blue3",
 } 
 
 plotsurvidf = function(f, style=c("box","uniform","left","right","midpoint"),
-    xlab="Time", ylab="Survival Probability", col="blue3", fill=NA,  
+    xlab="Time", ylab="Survival Probability", col="blue3", fill=0,  
     add=FALSE, lty=1, lty.inf=2, xlim, ...) {
   style = match.arg(style)
   k = length(f$left)
@@ -210,7 +219,7 @@ plotsurvidf = function(f, style=c("box","uniform","left","right","midpoint"),
   else point.inf = upper
   if( missing(xlim) ) xlim = c(0, point.inf)
   m = length(f$p)
-  if(is.na(fill)) {
+  if(!is.na(fill) && fill==0) {
     fill.hsv = drop(rgb2hsv(col2rgb(col))) * c(1, .3, 1)
     fill = hsv(fill.hsv[1], fill.hsv[2], fill.hsv[3], .3)
   }
@@ -224,11 +233,9 @@ plotsurvidf = function(f, style=c("box","uniform","left","right","midpoint"),
                            xlab=xlab, ylab=ylab, lty=lty, ...)
            if(style == "box") {
              Sc = c(1, S)
-             for(i in 1:m) {
-               if(f$right[i] - f$left[i] > 0) 
-                 rect(f$left[i], Sc[i+1], f$right[i], Sc[i], border=col,
-                      col=fill)
-             }
+             j = which(f$right > f$left)
+             rect(f$left[j], Sc[j+1], f$right[j], Sc[j], border=col,
+                  col=fill)
            }
            lines(d, s, col=col, lty=lty, ...)
            lines(c(upper, point.inf), c(S[k-1],S[k-1]), col=col,
@@ -273,3 +280,204 @@ plotsurvidf = function(f, style=c("box","uniform","left","right","midpoint"),
   else points(upper, S[k-1], col=col, pch=20)
 }
 
+## ==========================================================================
+## Hierarchical CNM: a variant of the Constrained Newton Method for finding
+## the NPMLE survival function of a data set containing interval censoring.
+## This is a new method to build on those in the Icens and MLEcens
+## packages.  It uses the idea of block subsets of the S matrix to move
+## probability mass among blocks of candidate support intervals.
+##
+## Usage (parameters and return value) is similar to the methods in package
+## Icens, although note the transposed clique matrix.
+##
+## Arguments:
+##   data: Data
+##   w:  Weights
+##   D: Clique matrix, n*m (note, transposed c.f. Icens::EMICM,
+##      MLEcens::reduc).  The clique matrix may contain conditional
+##      probabilities rather than just membership flags, for use in HCNM
+##      recursively calling itself.
+##   p0: Vector (length m) of initial estimates for the probabilities of
+##      the support intervals.
+##   maxit: Maximum number of iterations to perform
+##   tol: Tolerance for the stopping condition (in log-likelihood value)
+##   blockpar:
+##     NA or NULL  means choose a value based on the data (using n and r)
+##     ==0  means same as cnm (don't do blocks)
+##      <1  means nblocks is this power of sj, e.g. 0.5 for sqrt
+##      >1  means exactly this block size (e.g. 40)
+##   recurs.maxit: For internal use only: maximum number of iterations in
+##      recursive calls
+##   depth: For internal use only: depth of recursion
+##   verb: For internal use only: depth of recursion
+
+## Author: Stephen S. Taylor and Yong Wang
+
+## Reference: Wang, Y. and Taylor, S. M. (2013). Efficient computation of
+## nonparametric survival functions via a hierarchical mixture
+## formulation. Statistics and Computing, 23, 713-725.
+## ==========================================================================
+
+hcnm = function(data, w=1, D=NULL, p0=NULL, maxit=100, tol=1e-6,
+                blockpar=NULL, recurs.maxit=2, depth=1, verb=0) {
+  if(missing(D)) {
+    x2 = icendata(data, w)
+    if(nrow(x2$o) == 0 || all(x2$o[,2] == Inf)) { # exact or right-censored only
+      r0 = km(x2)
+      r = list(f=r0$f, convergence=TRUE, ll=r0$ll, maxgrad=0, numiter=1)
+      class(r) = "npsurv"
+      return(r)
+    }
+    x = rbind(cbind(x2$t, x2$t), x2$o)
+    nx = nrow(x)
+    w = c(x2$wt, x2$wo)
+    dmat = Deltamatrix(x)
+    left = dmat$left
+    right = dmat$right
+    intervals = cbind(left, right)
+    D = dmat$Delta
+  }
+  else {
+    if (missing(p0)) stop("Must provide 'p0' with D.")
+    if (!missing(data)) warning("D and data both provided.  LR ignored!")
+    nx = nrow(D)
+    w = rep(w, length=nx)
+    intervals = NULL
+  }
+  n = sum(w)
+  wr = sqrt(w)
+  converge = FALSE
+  m = ncol(D)
+  m1 = 1:m
+  nblocks = 1
+  maxdepth = depth
+  i = rowSums(D) == 1
+  r = mean(i)         # Proportion of exact observations
+  if(is.null(p0)) {
+    ## Derive an initial p vector.
+    j = colSums(D[i,,drop=FALSE]) > 0
+    while(any(c(FALSE,(i <- rowSums(D[,j,drop=FALSE])==0)))) {
+      j[which.max(colSums(D[i,,drop=FALSE]))] = TRUE
+    }
+    p = colSums(w * D) * j
+  }
+  else { if(length(p <- p0) != m) stop("Argument 'p0' is the wrong length.") }
+  p = p / sum(p)
+  P = drop(D %*% p)
+  ll = sum(w * log(P))
+  evenstep = FALSE
+  
+  for(iter in 1:maxit) {
+    p.old = p
+    ll.old = ll
+    S = D / P
+    g = colSums(w * S)
+    dmax = max(g) - n
+    if(verb > 0) {
+      cat("##### Iteration", i, "#####\n")
+      cat("Log-likelihood: ", signif(ll, 6), "\n")
+    }
+    if(verb > 1) cat("Maximum gradient: ", signif(dmax, 6), "\n")
+    if(verb > 2) {cat("Probability vector:\n"); print(p)} 
+    j = p > 0
+    if(depth==1) {
+      s = unique(c(1,m1[j],m))
+      if (length(s) > 1) for (l in 2:length(s)) {
+        j[s[l-1] + which.max(g[s[l-1]:s[l]]) - 1] = TRUE
+      }
+    }
+    sj = sum(j)
+    ## BW: matrix of block weights: sj rows, nblocks columns
+    if(is.null(blockpar) || is.na(blockpar))
+      ## Default blockpar based on log(sj)
+      iter.blockpar = ifelse(sj < 30, 0,
+                             1 - log(max(20,10*log(sj/100)))/log(sj))
+    else iter.blockpar = blockpar
+    if(iter.blockpar==0 | sj < 30) {
+      nblocks = 1
+      BW = matrix(1, nrow=sj, ncol=1)
+    }
+    else {
+      nblocks = max(1, if(iter.blockpar>1) round(sj/iter.blockpar)
+                       else floor(min(sj/2, sj^iter.blockpar)))
+      i = seq(0, nblocks, length=sj+1)[-1]
+      if(evenstep) {
+        nblocks = nblocks + 1
+        BW = outer(round(i)+1, 1:nblocks, "==")
+      }
+      else BW = outer(ceiling(i), 1:nblocks, "==")
+      storage.mode(BW) = "numeric"
+    }
+
+    for(block in 1:nblocks) {
+      jj = logical(m)
+      jj[j] = BW[,block] > 0
+      sjj = sum(jj)
+      if (sjj > 1 && (delta <- sum(p.old[jj])) > 0) {
+        Sj = S[,jj]
+        res = pnnls(wr * Sj, wr * drop(Sj %*% p.old[jj]) + wr, sum=delta)
+        if (res$mode > 1) warning("Problem in pnnls(a,b)")
+        p[jj] = p[jj] +  BW[jj[j],block] *
+          (res$x * (delta / sum(res$x)) - p.old[jj])
+      }
+    }
+    
+    ## Maximise likelihood along the line between p and p.old
+    p.gap = p - p.old              # vector from old to new estimate
+    ## extrapolated rise in ll, based on gradient at old estimate
+    ll.rise.gap = sum(g * p.gap) 
+    alpha = 1
+    p.alpha = p
+    ll.rise.alpha = ll.rise.gap
+    repeat {
+      P = drop(D %*% p.alpha)
+      ll = sum(w * log(P))
+      if(ll >= ll.old && ll + ll.rise.alpha <= ll.old) {
+        p = p.alpha               # flat land reached
+        converge = TRUE
+        break
+      }
+      if(ll > ll.old && ll >= ll.old + ll.rise.alpha * .33) {
+        p = p.alpha               # Normal situation:  new ll is higher
+        break
+      }
+      if((alpha <- alpha * 0.5) < 1e-10) {
+        p = p.old
+        P = drop(D %*% p)
+        ll = ll.old
+        converge = TRUE
+        break
+      }
+      p.alpha = p.old + alpha * p.gap
+      ll.rise.alpha = alpha * ll.rise.gap
+    }
+    if(converge) break
+
+    if (nblocks > 1) {
+      ## Now jiggle p around among the blocks
+      Q = sweep(BW,1,p[j],"*")  # Matrix of weighted probabilities: [sj,nblocks]
+      q = colSums(Q)            # its column sums (total in each block)
+      ## Now Q is n*nblocks Matrix of probabilities for mixture components
+      Q = sweep(D[,j] %*% Q, 2, q, "/")  
+      if (any(q == 0)) {
+        warning("A block has zero probability!")
+      }
+      else {
+        ## Recursively call HCNM to allocate probability among the blocks 
+        res = hcnm(w=w, D=Q, p0=q, blockpar=iter.blockpar,
+                   maxit=recurs.maxit, recurs.maxit=recurs.maxit,
+                   depth=depth+1)
+        maxdepth = max(maxdepth, res$maxdepth)
+        if (res$ll > ll) {
+          p[j] = p[j] * (BW %*% (res$pf / q))
+          P = drop(D %*% p)
+          ll = sum(w * log(P))  # should match res$lval
+        }
+      }
+    }
+    if(iter > 2) if( ll <= ll.old + tol ) {converge=TRUE; break}
+    evenstep = !evenstep
+  }
+  list(pf=p, intervals=intervals, convergence=converge, method="hcnm", ll=ll,
+       maxgrad=max(crossprod(w/P, D))-n, numiter=iter)
+}

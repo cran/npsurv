@@ -60,7 +60,7 @@ plotgraduh(h, data, w=1, len=500, xlim, ylim, vert=TRUE,
     class \code{icendata}.}
 
   \item{w}{additional weights/multiplicities for the observations stored
-  in \code{x}.} 
+  in \code{data}.} 
 
   \item{fn}{function to be plotted. It can be 
 
@@ -136,8 +136,9 @@ plotgraduh(h, data, w=1, len=500, xlim, ylim, vert=TRUE,
 
 \references{
 
-  Wang, Y. and Fani, S. (2015). Nonparametric maximum likelihood
-  computation of a U-shaped hazard function. (In preparation)
+  Wang, Y. and Fani, S. (2017). Nonparametric maximum likelihood
+  computation of a U-shaped hazard function. \emph{Statistics and
+  Computing}, (in print).
 
 }
 

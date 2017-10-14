@@ -848,6 +848,7 @@ plotsurvuh = function(h, add=FALSE, lty=1, lwd=2, len=500, vert=FALSE,
 plotgraduh = function(h, data, w=1, len=500, xlim, ylim, vert=TRUE,
     add=FALSE, xlab="Time", ylab="Gradient",
     col0="red3", col1="blue3", col2="green3", order=0, ...) {
+  if(! order %in% 0:2) stop("'order' must be 0, 1 or 2")
   x = icendata(data, w)
   maxf = h$upper 
   if(missing(xlim)) xlim = c(0, maxf)
@@ -858,7 +859,7 @@ plotgraduh = function(h, data, w=1, len=500, xlim, ylim, vert=TRUE,
       len=len), h$eta)))
   g11 = grad1(tau1, h, x, order=order)[[1]]
   g22 = grad2(eta1, h, x, order=order)[[1]]
-  g0 = grad0(h, x)
+  g0 = if(order == 0) grad0(h, x) else 0
   if(missing (ylim)) ylim= range(g0, g11, g22)
   if(add) lines(c(0,maxf), c(0, 0), col="grey")
   else plot(c(0,maxf), c(0, 0), type="l", col="grey", xlim=xlim, ylim=ylim,
@@ -871,8 +872,8 @@ plotgraduh = function(h, data, w=1, len=500, xlim, ylim, vert=TRUE,
   lines(tau1, g11, col=col1, lty=1, lwd=1)
   j1 = h$tau != 0 & h$tau != h$upper
   j2 = h$eta != 0 & h$eta != h$upper
-  points(h$tau[j1], grad1(h$tau[j1],h,x)$d0, col=col1, pch=2)
-  points(h$eta[j2], grad2(h$eta[j2],h,x)$d0, col=col2, pch=6)
+  points(h$tau[j1], grad1(h$tau[j1],h,x,order=order)[[1]], col=col1, pch=2)
+  points(h$eta[j2], grad2(h$eta[j2],h,x,order=order)[[1]], col=col2, pch=6)
   lines(c(h$tau[k], h$eta[1]), rep(g0, 2), col=col0, lty=1, lwd=1) 
   points((h$tau[k] + h$eta[1])/2, g0, col=col0, pch=20)
   if(!add) legend("bottomright",

@@ -1,7 +1,7 @@
 Package: npsurv
-Title: Non-Parametric Survival Analysis
-Version: 0.3-4
-Date: 2015-11-12
+Title: Nonparametric Survival Analysis
+Version: 0.4-0
+Date: 2017-10-13
 Author: Yong Wang
 Maintainer: Yong Wang <yongwang@auckland.ac.nz>
 Depends: lsei
@@ -11,6 +11,6 @@ Description: Contains functions for non-parametric survival analysis of
 License: GPL (>= 2)
 URL: https://www.stat.auckland.ac.nz/~yongwang
 NeedsCompilation: no
-Packaged: 2015-11-13 00:16:03 UTC; yong
+Packaged: 2017-10-13 22:05:26 UTC; yong
 Repository: CRAN
-Date/Publication: 2015-11-15 18:28:12
+Date/Publication: 2017-10-14 07:06:20 UTC

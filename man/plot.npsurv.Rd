@@ -23,7 +23,7 @@
 \method{plot}{npsurv}(x, ...)
 \method{plot}{idf}(x, data, fn=c("surv","grad"), ...)
 plotsurvidf(f, style=c("box","uniform","left","right","midpoint"),
-            xlab="Time", ylab="Survival Probability", col="blue3", fill=NA,  
+            xlab="Time", ylab="Survival Probability", col="blue3", fill=0,  
             add=FALSE, lty=1, lty.inf=2, xlim, ...)
 plotgradidf(f, data, w=1, col1="red3", col2="blue3", 
             xlab="Survival Time", ylab="Gradient", xlim, ...)
@@ -65,7 +65,8 @@ plotgradidf(f, data, w=1, col1="red3", col2="blue3",
 
   \item{col}{color for all line segments, including box/rectangle borders.}
 
-  \item{fill}{color for filling a box/rectangle.}
+  \item{fill}{color for filling a box/rectangle. By default, a lighter
+    semi-transparent color is used.}
 
   \item{lty}{line type}
 

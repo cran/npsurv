@@ -49,7 +49,7 @@ uh(alpha, tau, nu, eta, mu, upper=Inf, deg=1, collapse=TRUE)
 
 \details{
 
-  A U-shape hazard function, as generalized by Wang and Fani (2015), is
+  A U-shape hazard function, as generalized by Wang and Fani (2017), is
   given by
 
   \deqn{h(t) = \alpha + \sum_{j = 1}^k \nu_j(\tau_j - t)_+^p + \sum_{j
@@ -75,8 +75,8 @@ uh(alpha, tau, nu, eta, mu, upper=Inf, deg=1, collapse=TRUE)
 
 \value{
 
-  \code{uh} returns an object of class \code{uh}. It is a list having
-  elements \code{alpha}, \code{tau}, \code{nu}, \code{eta}, \code{mu},
+  \code{uh} returns an object of class \code{uh}. It is a list with
+  components \code{alpha}, \code{tau}, \code{nu}, \code{eta}, \code{mu},
   \code{upper} and \code{deg}, which store their corresponding values as
   described above.
   
@@ -99,8 +99,9 @@ uh(alpha, tau, nu, eta, mu, upper=Inf, deg=1, collapse=TRUE)
   of a convex bathtub-shaped hazard function. \emph{Bernoulli},
   \bold{15}, 1010-1035.
   
-  Wang, Y. and Fani, S. (2015). Nonparametric maximum likelihood
-  computation of a U-shaped hazard function. (In preparation)
+  Wang, Y. and Fani, S. (2017). Nonparametric maximum likelihood
+  computation of a U-shaped hazard function. \emph{Statistics and
+  Computing}, (in print).
 
 }
 

@@ -47,8 +47,9 @@ denuh(t, h)
 
 \references{
 
-  Wang, Y. and Fani, S. (2015). Nonparametric maximum likelihood
-  computation of a U-shaped hazard function. (In preparation)
+  Wang, Y. and Fani, S. (2017). Nonparametric maximum likelihood
+  computation of a U-shaped hazard function. \emph{Statistics and
+  Computing}, (in print).
 
 }
 

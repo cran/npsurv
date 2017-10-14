@@ -32,7 +32,7 @@ km(data, w=1)
 
 \value{
 
-  A list consisting of:
+  A list with components:
   
   \item{f}{NPMLE, an object of class \code{idf}.}
   
