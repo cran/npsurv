@@ -2,6 +2,106 @@
 # Nonparametric maximum likelihood estimation from interval-censored data #
 # ----------------------------------------------------------------------- #
 
+
+
+##'Nonparametric Survival Function Estimation
+##'
+##'
+##'\code{npsurv} computes the nonparametric maximum likelihood esimate (NPMLE)
+##'of a survival function for general interval-censored data.
+##'
+##'
+##'If \code{data} is a vector, it contains only exact observations, with
+##'weights given in \code{w}.
+##'
+##'If \code{data} is a matrix with two columns, it contains interval-censored
+##'observations, with the two columns storing their left and right end-points,
+##'respectively. If the left and right end-points are equal, then the
+##'observation is exact. Weights are provided by \code{w}.
+##'
+##'If \code{data} is a matrix with three columns, it contains interval-censored
+##'observations, with the first two columns storing their left and right
+##'end-points, respectively. The weight of each observation is the third-column
+##'value multiplied by the corresponding weight value in \code{w}.
+##'
+##'The algorithm used for computing the NPMLE is either the constrained Newton
+##'method (CNM) (Wang, 2008), or the hierachical constrained Newton method
+##'(HCNM) (Wang and Taylor, 2013) when there are a large number of maximal
+##'intersection intervals.
+##'
+##'Inside the function, it examines if data has only right censoring, and if
+##'so, the Kaplan-Meier estimate is computed directly by function \code{km}.
+##'
+##'An interval-valued observation is either \eqn{(L_i, R_i]}{(Li, Ri]} if
+##'\eqn{L_i < R_i}{Li < Ri}, or \eqn{[L_i, R_i]}{[Li, Ri]} if \eqn{L_i =
+##'R_i}{Li = Ri}.
+##'
+##'@aliases npsurv npsurv.object
+##'@param data vector or matrix, or an object of class \code{icendata}.
+##'@param w weights or multiplicities of the observations.
+##'@param maxit maximum number of iterations.
+##'@param tol tolerance level for stopping the algorithm. It is used as the
+##'threshold on the increase of the log-likelihood after each iteration.
+##'@param verb verbosity level for printing intermediate results at each
+##'iteration.
+##'@return
+##'
+##'An object of class \code{npsurv}, which is a list with components:
+##'
+##'\item{f}{NPMLE, an object of class \code{idf}.}
+##'
+##'\item{upper}{largest finite value in the data.}
+##'
+##'\item{convergence}{= \code{TRUE}, converged successfully;
+##'
+##'= \code{FALSE}, maximum number of iterations reached.}
+##'
+##'\item{method}{method used internally, either \code{cnm} or \code{hcnm}.}
+##'
+##'\item{ll}{log-likelihood value of the NPMLE \code{f}.}
+##'
+##'\item{maxgrad}{maximum gradient value of the NPMLE \code{f}.}
+##'
+##'\item{numiter}{number of iterations used.}
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{icendata}}, \code{\link{Deltamatrix}},
+##'\code{\link{idf}}, \code{\link{km}}.
+##'@references
+##'
+##'Wang, Y. (2008). Dimension-reduced nonparametric maximum likelihood
+##'computation for interval-censored data. \emph{Computational Statistics &
+##'Data Analysis}, \bold{52}, 2388-2402.
+##'
+##'Wang, Y. and Taylor, S. M. (2013). Efficient computation of nonparametric
+##'survival functions via a hierarchical mixture formulation. \emph{Statistics
+##'and Computing}, \bold{23}, 713-725.
+##'@keywords function
+##'@examples
+##'
+##'## all exact observations
+##'data(acfail)
+##'plot(npsurv(acfail))
+##'
+##'## right-censored (and exact) observations
+##'data(gastric)
+##'plot(npsurv(gastric))
+##'
+##'data(leukemia)
+##'i = leukemia[,"group"] == "Placebo"
+##'plot(npsurv(leukemia[i,1:2]), xlim=c(0,40), col="blue") # placebo
+##'plot(npsurv(leukemia[!i,1:2]), add=TRUE, col="red")     # 6-MP
+##'
+##'## purely interval-censored data
+##'data(ap)
+##'plot(npsurv(ap))
+##'
+##'data(cancer)
+##'cancerRT = with(cancer, cancer[group=="RT",1:2])
+##'plot(npsurv(cancerRT), xlim=c(0,60))                  # survival of RT 
+##'cancerRCT = with(cancer, cancer[group=="RCT",1:2])
+##'plot(npsurv(cancerRCT), add=TRUE, col="green")        # survival of RCT 
+##'
+##'@export npsurv
 npsurv = function(data, w=1, maxit=100, tol=1e-6, verb=0) {
   x2 = icendata(data, w)
   if(nrow(x2$o) == 0 || all(x2$o[,2] == Inf)) { # exact or right-censored only
@@ -33,7 +133,7 @@ npsurv = function(data, w=1, maxit=100, tol=1e-6, verb=0) {
   }
   p = colSums(w * D) * j
   p = p / sum(p)
-  if(m >= 30) {                     ## Turn to HCNM
+  if(m >= 200) {                     ## Turn to HCNM
     r = hcnm(w=w, D=D, p0=p, maxit=maxit, tol=tol, verb=verb)
     j = r$pf > 0
     f = idf(left[j], right[j], r$pf[j]) 
@@ -48,8 +148,7 @@ npsurv = function(data, w=1, maxit=100, tol=1e-6, verb=0) {
   for(i in 1:maxit) {
     p.old = p
     ll.old = ll
-    S = D / P
-    ## d = crossprod(w, S)[1,]
+    S = D / pmax(P, 1e-100)
     d = colSums(w * S)
     dmax = max(d) - n
     if(verb > 0) {
@@ -86,6 +185,51 @@ npsurv = function(data, w=1, maxit=100, tol=1e-6, verb=0) {
 
 # An interval is either (Li, Ri] if Li < Ri, or [Li, Ri] if Li = Ri. 
 
+
+
+##'Delta matrix
+##'
+##'
+##'\code{Deltamatrix} computes the Delta matrix, along with maximal
+##'intersection intervals, for a set of intervals.
+##'
+##'
+##'An intersection interval is a nonempty intersection of any combination of
+##'the given intervals, and a maximal intersection interval is an intersection
+##'interval that contains no other intersection interval.
+##'
+##'The Delta matrix is a matrix of indicators (\code{TRUE} or \code{FALSE}).
+##'The rows correspond to the given interval-censored observations, and the
+##'columns the maximal intersection intervals. A \code{TRUE} value of the
+##'(i,j)-th element means that the i-th observation covers the j-th maximal
+##'intersection interval, and a \code{FALSE} value means the opposite.
+##'
+##'@param LR two-column matrix, each row of which stores an censoring interval
+##'of the form \eqn{(L_i, R_i]}{(Li, Ri]}.  If \eqn{L_i = }{Li = Ri}\eqn{
+##'R_i}{Li = Ri}, it is an exact observation.
+##'@return
+##'
+##'A list with components:
+##'
+##'\item{left}{left endpoints of the maximal intersection intervals.}
+##'
+##'\item{right}{right endpoints of the maximal intersection intervals.}
+##'
+##'\item{Delta}{logical matrix, for the Delta matrix.}
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{icendata}}, \code{\link{idf}}.
+##'@references
+##'
+##'Wang, Y. (2008). Dimension-reduced nonparametric maximum likelihood
+##'computation for interval-censored data.  \emph{Computational Statistics &
+##'Data Analysis}, \bold{52}, 2388-2402.
+##'@keywords function
+##'@examples
+##'
+##'(x = cbind(1:5,1:5*3-2))
+##'Deltamatrix(x)
+##'
+##'@export Deltamatrix
 Deltamatrix = function(LR) {
   L = LR[,1]
   R = LR[,2]
@@ -125,6 +269,53 @@ Deltamatrix = function(LR) {
 # right     Right endpoints of the intervals
 # p         Probability masses allocated to the intervals
 
+
+
+##'Interval Distribution Function
+##'
+##'
+##' Class \code{idf} can be used to store a distribution function
+##' defined on a set of intervals. There are several functions
+##' associated with the class.
+##'
+##' \code{idf} creates an object of class \code{idf}. An \code{idf} object
+##'stores a distribution function defined on a set of intervals.
+##'
+##'
+##'When left and right endpoints are identical, the intervals just
+##' represent exact points.
+##'
+##'\code{print.idf} prints an object of class \code{idf} as a three-coumn
+##'matrix.
+##'
+##'@aliases idf idf.object print.idf
+##'@param left,right left and right endpoints of intervals on which the
+##'distribution function is defined.
+##'@param p probabilities allocated to the intervals. Probability values will
+##'be normalized inside the function.
+##'@param x an object of class \code{idf}.
+##'@param ... other arguments for printing.
+##'@return
+##'
+##'\item{left, right}{left and right endpoints of intervals on which the
+##'distribution function is defined.}
+##'
+##'\item{p}{probabilities allocated to the intervals.}
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{icendata}}, \code{\link{Deltamatrix}},
+##'\code{\link{npsurv}}.
+##'@keywords function
+##'@examples
+##'
+##'idf(1:5, 1:5*3-2, c(1,1,2,2,4))
+##'npsurv(cbind(1:5, 1:5*3-2))$f    # NPMLE 
+##'
+##'@usage
+##'idf(left, right, p)
+##'\method{print}{idf}(x, ...)
+##' 
+##'@export idf
+##'@export print.idf
 idf = function(left, right, p) {
   if(length(left) != length(right)) stop("length(left) != length(right)")
   names(left) = names(right) = names(p) = NULL
@@ -139,6 +330,46 @@ print.idf = function(x, ...) {
 
 # Kaplan-Meier estimate of the survival function for right-censored data
 
+
+
+##'Kaplan-Meier Estimation
+##'
+##'
+##'\code{km} computes the nonparametric maximum likelihood esimate (NPMLE) of a
+##'survival function for right-censored data.
+##'
+##'
+##'For details about the arguments, see \code{icendata}.
+##'
+##'@param data vector or matrix, or an object of class \code{icendata}.
+##'@param w weights/multiplicities of observations.
+##'@return
+##'
+##'A list with components:
+##'
+##'\item{f}{NPMLE, an object of class \code{idf}.}
+##'
+##'\item{ll}{log-likelihood value of the NPMLE \code{f}.}
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{icendata}}, \code{\link{npsurv}}, \code{\link{idf}}.
+##'@references
+##'
+##'Kaplan, E. L. and Meier, P. (1958). Nonparametric estimation from incomplete
+##'observations. \emph{Journal of the American Statistical Association},
+##'\bold{53}, 457-481.
+##'@keywords function
+##'@examples
+##'
+##'x = cbind(1:5, c(1,Inf,3,4,Inf))
+##'(f = km(x)$f)
+##'plot(f)
+##'
+##'data(leukemia)
+##'i = leukemia[,"group"] == "Placebo"
+##'plot(km(leukemia[i,1:2])$f, xlim=c(0,40), col="green3") # placebo
+##'plot(km(leukemia[!i,1:2])$f, add=TRUE)                  # 6-MP
+##'
+##'@export km
 km = function(data, w=1) {
   x = icendata(data, w)
   if(any(x$o[,2] != Inf))
@@ -167,6 +398,113 @@ km = function(data, w=1) {
 }
 
 ####  Plot functions
+
+
+
+##'Plot Functions for Nonparametric Survival Estimation
+##'
+##'Functions for plotting nonparametric survival functions and related ones.
+##' 
+##'\code{plot.npsurv} and \code{plot.idf} are wrapper functions that call
+##'either \code{plotsurvidf} or \code{plotgradidf}.
+##'
+##'\code{plotsurvidf} plots the survival function of the nonparametric maximum
+##'likelihood estimate (NPMLE).
+##'
+##'\code{plotgradidf} plots the gradient function of the NPMLE.
+##'
+##'
+##'\code{plotsurvidf} by default chooses a less saturated color for \code{fill}
+##'than \code{col}.
+##'
+##'\code{plotgradidf} plots gradient values as vertical lines located as the
+##'left endpoints of the maximal intersection intervals. Each maximal
+##'intersection interval is plotted as a wider line on the horizontal
+##'zero-gradient line, with a circle to represent the open left endpoint of the
+##'interval and a solid point the closed right endpoint of the interval. The
+##'maximal intersection intervals allocated with positive probabilities have
+##'zero gradients, and hence no vertical lines are drawn for them.
+##'
+##'@aliases plot.npsurv plot.idf plotsurvidf plotgradidf
+##'@param x an object of class \code{npsurv} (i.e., an output of function
+##'\code{npsurv}) or an object of class \code{idf}.
+##'@param fn either "surv" or "grad", to indicate plotting either the survival
+##'or the gradient function.
+##'@param f an object of class \code{idf}.
+##'@param style for how to plot the survival function on a "maximal
+##'intersection interval":
+##'
+##'= \code{box}, plot a rectangle, which shows the uncertainty of probability
+##'allocation within the interval;
+##'
+##'= \code{uniform}, treat it as a uniform distribution and hence the diagonal
+##'line of the rectangle is plotted;
+##'
+##'= \code{left}, plot only the left side of the rectangle;
+##'
+##'= \code{right}, plot only the right side of the rectangle;
+##'
+##'= \code{midpoint}, plot a vertical line at the midpoint of the interval.
+##'
+##'@param xlab,ylab x- or y-axis label.
+##'@param add = \code{TRUE}, adds the curve to the existing plot;
+##'
+##'= \code{FALSE}, plots the curve in a new one.
+##'@param col color for all line segments, including box/rectangle borders.
+##'@param fill color for filling a box/rectangle. By default, a lighter
+##'semi-transparent color is used.
+##'@param lty line type
+##'@param lty.inf line type for the rectangle that may extend to infinity.
+##'@param data vector or matrix that stores observations, or an object of class
+##'\code{icendata}.
+##'@param w additional weights/multiplicities of the observations stored in
+##'\code{x}.
+##'@param col1 color for drawing maximal intersection intervals allocated with
+##'positive probabilities.
+##'@param col2 color for drawing all gradients and the maximal intersection
+##'intervals allocated with zero probabilities.
+##'@param xlim x-coordinate limit points.
+##'@param ... arguments for other graphical parameters (see \code{par}).
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{icendata}}, \code{\link{idf}}, \code{\link{npsurv}}.
+##'@references
+##'
+##'Wang, Y. (2008). Dimension-reduced nonparametric maximum likelihood
+##'computation for interval-censored data. \emph{Computational Statistics &
+##'Data Analysis}, \bold{52}, 2388-2402.
+##'@keywords function
+##'@examples
+##'
+##'data(ap)
+##'plot(r<-npsurv(ap))              # survival function
+##'plot(r$f, ap, fn="g")            # all gradients virtually zeros.
+##'
+##'data(cancer)
+##'cancerRT = with(cancer, cancer[group=="RT",1:2])
+##'plot(rt<-npsurv(cancerRT), xlim=c(0,60))                  # survival of RT 
+##'cancerRCT = with(cancer, cancer[group=="RCT",1:2])
+##'plot(rct<-npsurv(cancerRCT), add=TRUE, col="green3") # survival of RCT 
+##'## as uniform dististrbutions.
+##'plot(rt, add=TRUE, style="uniform", col="blue3")
+##'plot(rct, add=TRUE, style="uniform", col="green3")
+##'
+##'## plot gradients; must supply data
+##'plot(rt, cancerRT, fn="g")        # for group RT
+##'plotgradidf(rct$f, cancerRCT)   # or, for group RCT
+##'
+##'@usage
+##'\method{plot}{npsurv}(x, ...)
+##'\method{plot}{idf}(x, data, fn=c("surv","grad"), ...)
+##'plotsurvidf(f, style=c("box","uniform","left","right","midpoint"),
+##'            xlab="Time", ylab="Survival Probability", col="blue3", fill=0,  
+##'            add=FALSE, lty=1, lty.inf=2, xlim, ...)
+##'plotgradidf(f, data, w=1, col1="red3", col2="blue3", 
+##'            xlab="Survival Time", ylab="Gradient", xlim, ...)
+##'
+##'@export plot.npsurv
+##'@export plot.idf
+##'@export plotsurvidf
+##'@export plotgradidf
 
 plot.npsurv = function(x, ...) plot(x$f, ...)
 
@@ -281,6 +619,7 @@ plotsurvidf = function(f, style=c("box","uniform","left","right","midpoint"),
 }
 
 ## ==========================================================================
+##
 ## Hierarchical CNM: a variant of the Constrained Newton Method for finding
 ## the NPMLE survival function of a data set containing interval censoring.
 ## This is a new method to build on those in the Icens and MLEcens
@@ -310,12 +649,13 @@ plotsurvidf = function(f, style=c("box","uniform","left","right","midpoint"),
 ##      recursive calls
 ##   depth: For internal use only: depth of recursion
 ##   verb: For internal use only: depth of recursion
-
-## Author: Stephen S. Taylor and Yong Wang
-
+##
+## Author: Yong Wang and Stephen S. Taylor
+##
 ## Reference: Wang, Y. and Taylor, S. M. (2013). Efficient computation of
 ## nonparametric survival functions via a hierarchical mixture
 ## formulation. Statistics and Computing, 23, 713-725.
+##
 ## ==========================================================================
 
 hcnm = function(data, w=1, D=NULL, p0=NULL, maxit=100, tol=1e-6,
@@ -350,7 +690,7 @@ hcnm = function(data, w=1, D=NULL, p0=NULL, maxit=100, tol=1e-6,
   m = ncol(D)
   m1 = 1:m
   nblocks = 1
-  maxdepth = depth
+  # maxdepth = depth
   i = rowSums(D) == 1
   r = mean(i)         # Proportion of exact observations
   if(is.null(p0)) {
@@ -467,7 +807,7 @@ hcnm = function(data, w=1, D=NULL, p0=NULL, maxit=100, tol=1e-6,
         res = hcnm(w=w, D=Q, p0=q, blockpar=iter.blockpar,
                    maxit=recurs.maxit, recurs.maxit=recurs.maxit,
                    depth=depth+1)
-        maxdepth = max(maxdepth, res$maxdepth)
+        # maxdepth = max(maxdepth, res$maxdepth)
         if (res$ll > ll) {
           p[j] = p[j] * (BW %*% (res$pf / q))
           P = drop(D %*% p)

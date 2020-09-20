@@ -2,6 +2,141 @@
 # Estimation of a U-shaped Hazard Function #
 ############################################
 
+
+
+##'U-shaped Hazard Function Estimation
+##'
+##'
+##'\code{Uhaz} computes the nonparametric maximum likelihood esimate (NPMLE) of
+##'a U-shaped hazard function from exact or interval-censored data, or a mix of
+##'the two types of data.
+##'
+##'
+##'If \code{data} is a vector, it contains only exact observations, with
+##'weights given in \code{w}.
+##'
+##'If \code{data} is a matrix with two columns, it contains interval-censored
+##'observations, with the two columns storing their left and right end-points,
+##'respectively. If the left and right end-points are equal, then the
+##'observation is exact. Weights are provided by \code{w}.
+##'
+##'If \code{data} is a matrix with three columns, it contains interval-censored
+##'observations, with the first two columns storing their left and right
+##'end-points, respectively. The weight of each observation is the third-column
+##'value multiplied by the corresponding weight value in \code{w}.
+##'
+##'The algorithm used for the computing the NPMLE of a hazard function under
+##'the U-shape restriction is is proposed by Wang and Fani (2015). Such a
+##'hazard function is given by
+##'
+##'A U-shaped hazard function is given by
+##'
+##'\deqn{h(t) = \alpha + \sum_{j = 1}^k \nu_j(\tau_j - t)_+^p + \sum_{j = 1}^{m} \mu_j (t-\eta_j)_+^p,}{  h(t) = alpha + sum_{j=1}^k nu_j (tau_j - t)_+^p
+##'                + sum_{j=1}^m mu_j (t - eta_j)_+^p,}
+##'
+##'where \eqn{\alpha,\nu_j,\mu_j \ge 0}{alpha, nu_j, mu_j \ge 0},
+##'\eqn{\tau_1 < \cdots < \tau_k \le \eta_1 < \cdots < \eta_m,}{tau_1 < ... < tau_k <= eta_1 < ... < eta_m,} and \eqn{p \ge 0}{p >= 0} is the the spline degree which
+##'determines the smoothness of the U-shaped hazard. As p increases, the family
+##'of hazard functions becomes increasingly smoother, but at the time, smaller.
+##'When p = 0, the hazard function is U-shaped, as studied by Bray et al.
+##'(1967). When p = 1, the hazard function is convex, as studied by Jankowski
+##'and Wellner (2009a,b).
+##'
+##'Note that \code{deg} (i.e., p in the above mathematical display) can take on
+##'any nonnegative real value.
+##'
+##'@aliases Uhaz Uhaz.object
+##'@param data vector or matrix, or an object of class \code{icendata}.
+##'@param w weights or multiplicities of the observations.
+##'@param deg nonnegative real number for spline degree (i.e., p in the formula
+##'below).
+##'@param maxit maximum number of iterations.
+##'@param tol tolerance level for stopping the algorithm. It is used as the
+##'threshold on the increase of the log-likelihood after each iteration.
+##'@param verb verbosity level for printing intermediate results in each
+##'iteration.
+##'@return
+##'
+##'An object of class \code{Uhaz}, which is a list with components:
+##'
+##'\item{convergence}{= \code{TRUE}, converged successfully;
+##'
+##'= \code{FALSE}, maximum number of iterations reached.}
+##'
+##'\item{grad}{gradient values at the knots.}
+##'
+##'\item{numiter}{number of iterations used.}
+##'
+##'\item{ll}{log-likelihood value of the NPMLE \code{h}.}
+##'
+##'\item{h}{NPMLE of the U-shaped hazard function, an object of class
+##'\code{uh}.}
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{icendata}}, \code{\link{nzmort}}.
+##'@references
+##'
+##'Bray, T. A., Crawford, G. B., and Proschan, F. (1967).  \emph{Maximum
+##'Likelihood Estimation of a U-shaped Failure Rate Function}. Defense
+##'Technical Information Center.
+##'
+##'Jankowski, H. K. and Wellner, J. A. (2009a). Computation of nonparametric
+##'convex hazard estimators via profile methods. \emph{Journal of Nonparametric
+##'Statistics}, \bold{21}, 505-518.
+##'
+##'Jankowski, H. K. and Wellner, J. A. (2009b). Nonparametric estimation of a
+##'convex bathtub-shaped hazard function. \emph{Bernoulli}, \bold{15},
+##'1010-1035.
+##'
+##'Wang, Y. and Fani, S. (2018). Nonparametric maximum likelihood
+##' computation of a U-shaped hazard function. \emph{Statistics and
+##' Computing}, \bold{28}, 187-200.
+##' 
+##'@keywords function
+##'@examples
+##'
+##'## Interval-censored observations
+##'data(ap)
+##'(r = Uhaz(ap, deg=0))
+##'plot(r, ylim=c(0,.3), col=1)
+##'for(i in 1:6) plot(Uhaz(ap, deg=i/2), add=TRUE, col=i+1)
+##'legend(15, 0.01, paste0("deg = ", 0:6/2), lwd=2, col=1:7, xjust=1, yjust=0)
+##'
+##'## Exact observations
+##'data(nzmort)
+##'x = with(nzmort, nzmort[ethnic=="maori",])[,1:2]   # Maori mortality
+##'(h0 = Uhaz(x[,1]+0.5, x[,2], deg=0)$h)     # U-shaped hazard
+##'(h1 = Uhaz(x[,1]+0.5, x[,2], deg=1)$h)     # convex hazard
+##'(h2 <- Uhaz(x[,1]+0.5, x[,2], deg=2)$h)    # smooth U-shaped hazard
+##'
+##'plot(h0, pch=2)                            # plot hazard functions
+##'plot(h1, add=TRUE, col="green3", pch=1)
+##'plot(h2, add=TRUE, col="red3", pch=19)
+##'
+##'age = 0:max(x[,1])                         # plot densities
+##'count = integer(length(age))
+##'count[x[,"age"]+1] = x[,"deaths"]
+##'barplot(count/sum(count), space=0, col="lightgrey")
+##'axis(1, pos=NA, at=0:10*10)
+##'plot(h0, fn="d", add=TRUE, pch=2)
+##'plot(h1, fn="d", add=TRUE, col="green3", pch=1)
+##'plot(h2, fn="d", add=TRUE, col="red3", pch=19)
+##'
+##'plot(h0, fn="s", pch=2)                    # plot survival functions
+##'plot(h1, fn="s", add=TRUE, col="green3", pch=1)
+##'plot(h2, fn="s", add=TRUE, col="red3", pch=19)
+##'
+##'## Exact and right-censored observations
+##'data(gastric)
+##'plot(h0<-Uhaz(gastric, deg=0)$h)           # plot hazard functions
+##'plot(h1<-Uhaz(gastric, deg=1)$h, add=TRUE, col="green3")
+##'plot(h2<-Uhaz(gastric, deg=2)$h, add=TRUE, col="red3")
+##'
+##'plot(npsurv(gastric), fn="s", col="grey")  # plot survival functions
+##'plot(h0, fn="s", add=TRUE)
+##'plot(h1, fn="s", add=TRUE, col="green3")
+##'plot(h2, fn="s", add=TRUE, col="red3")
+##'
+##'@export Uhaz
 Uhaz = function(data, w=1, deg=1, maxit=100, tol=1e-6, verb=0) {
   x = icendata(data, w)
   h = uh.initial(x, deg)
@@ -381,6 +516,43 @@ grad2 = function(eta, h, x, expdH=NULL, order=0) {
   g
 }
 
+
+
+##'Computes the Log-likelihood Value of a U-shaped Hazard Function
+##'
+##'
+##'\code{logLikuh} returns the log-likelihood value of a U-shaped hazard
+##'function, given a data set.
+##'
+##'
+##'@param h an object of class \code{uh}.
+##'@param data numeric vector or matrix for exact or interval-censored
+##'observations, or an object of class \code{icendata}.
+##'@return
+##'
+##'Log-likelihood value evaluated at \code{h}, given \code{data}.
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{Uhaz}}, \code{\link{icendata}}, \code{\link{plot.uh}}
+##'@references
+##'
+##'Wang, Y. and Fani, S. (2018). Nonparametric maximum likelihood
+##' computation of a U-shaped hazard function. \emph{Statistics and
+##' Computing}, \bold{28}, 187-200.
+##' 
+##'@keywords function
+##'@examples
+##'
+##'data(ap)
+##'(h0 = uh(.2, NULL, NULL, NULL, NULL, 15, 1))   # Uniform hazard
+##'plot(h0, ylim=c(0,.3))
+##'logLikuh(h0, ap)
+##'
+##'r = Uhaz(ap, deg=2)
+##'r$ll
+##'logLikuh(r$h, ap)
+##'plot(r$h, add=TRUE, col="red3")
+##'
+##'@export logLikuh
 logLikuh = function(h, data) {
   x = icendata(data)
   if(length(x$t) > 0) ll = sum(x$wt[x$i1] * log(hazuh(x$t[x$i1], h))) -
@@ -644,6 +816,95 @@ collapse = function(h, x, tol=0){
 
 # deg - polynomial degree
 
+
+
+##'U-shaped Hazard Function
+##'
+##'
+##' Class \code{uh} can be used to store U-shaped hazard functions.
+##' There are a couple of functions associated with the class.
+##' 
+##'\code{uh} creates an object of class \code{uh}, which stores a U-shaped
+##'hazard function.
+##'
+##'\code{print.uh} prints an object of class \code{uh}.
+##'
+##'
+##'A U-shape hazard function, as generalized by Wang and Fani (2018), is given
+##'by
+##'
+##'\deqn{h(t) = \alpha + \sum_{j = 1}^k \nu_j(\tau_j - t)_+^p + \sum_{j = 1}^{m} \mu_j (t-\eta_j)_+^p,}{  h(t) = alpha + sum_{j=1}^k nu_j (tau_j - t)_+^p
+##'                + sum_{j=1}^m mu_j (t - eta_j)_+^p,}
+##'
+##'where \eqn{\alpha,\nu_j,\mu_j \ge 0}{alpha, nu_j, mu_j \ge 0},
+##'\eqn{\tau_1 < \cdots < \tau_k \le \eta_1 < \cdots < \eta_m,}{tau_1 < ... < tau_k <= eta_1 < ... < eta_m,} and \eqn{p \ge 0}{p >= 0} is the the spline degree which
+##'determines the smoothness of the U-shaped hazard. As p increases, the family
+##'of hazard functions becomes increasingly smoother, but at the same time,
+##'smaller. When \eqn{p = 0}{p = 0}, the hazard function is U-shaped, as
+##'studied by Bray et al. (1967). When \eqn{p = 1}{p = 1}, the hazard function
+##'is convex, as studied by Jankowski and Wellner (2009a,b).
+##'
+##'\code{print.uh} prints an object of class \code{uh}. While \code{alpha},
+##'\code{upper} and \code{deg} are printed as they are, \code{tau} and
+##'\code{nu} are printed as a two-column matrix, and so are \code{eta} and
+##'\code{mu}.
+##'
+##'@aliases uh uh.object print.uh
+##'@param alpha a nonnegative value, for the constant coefficient.
+##'@param tau vector of nonnegative real values, for left knots.
+##'@param nu vector of nonnegative values, for masses associated with the left
+##'knots.
+##'@param eta vector of nonnegative real values, for right knots.
+##'@param mu vector of nonnegative real values, for masses associated with the
+##'right knots.
+##'@param upper a positive value, at which point the hazard starts to become
+##'infinite.
+##'@param deg nonnegative real number for spline degree (i.e., p in the formula
+##'below).
+##'@param collapse logical, indicating if identical knots should be collapsed.
+##'@param x an object of class \code{uh}.
+##'@param ... other auguments for printing.
+##'@return
+##'
+##'\code{uh} returns an object of class \code{uh}. It is a list with components
+##'\code{alpha}, \code{tau}, \code{nu}, \code{eta}, \code{mu}, \code{upper} and
+##'\code{deg}, which store their corresponding values as described above.
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{Uhaz}}, \code{\link{icendata}}, \code{\link{plot.uh}}
+##'@references
+##'
+##'Bray, T. A., Crawford, G. B., and Proschan, F. (1967).  \emph{Maximum
+##'Likelihood Estimation of a U-shaped Failure Rate Function}. Defense
+##'Technical Information Center.
+##'
+##'Jankowski, H. K. and Wellner, J. A. (2009a). Computation of nonparametric
+##'convex hazard estimators via profile methods. \emph{Journal of Nonparametric
+##'Statistics}, \bold{21}, 505-518.
+##'
+##'Jankowski, H. K. and Wellner, J. A. (2009b). Nonparametric estimation of a
+##'convex bathtub-shaped hazard function. \emph{Bernoulli}, \bold{15},
+##'1010-1035.
+##'
+##'Wang, Y. and Fani, S. (2018). Nonparametric maximum likelihood
+##' computation of a U-shaped hazard function. \emph{Statistics and
+##' Computing}, \bold{28}, 187-200.
+##' 
+##'@keywords function
+##'@examples
+##'
+##'(h0 = uh(3, 2, 3, 4, 5, 7, deg=0))              # deg = 0
+##'plot(h0, ylim=c(0,20))
+##'(h1 = uh(4, 2, 3, 5, 6, 7, deg=1))              # deg = 1
+##'plot(h1, add=TRUE, col="green3")
+##'(h2 = uh(1, 1:2, 3:4, 5:6, 7:8, 9, deg=2))      # deg = 2
+##'plot(h2, add=TRUE, col="red3")
+##'
+##'@usage
+##'uh(alpha, tau, nu, eta, mu, upper=Inf, deg=1, collapse=TRUE)
+##'\method{print}{uh}(x, ...)
+##' 
+##'@export uh
+##'@export print.uh
 uh = function(alpha, tau, nu, eta, mu, upper=Inf, deg=1, collapse=TRUE) {
   if(length(tau) == 0) {tau=0; nu=0}
   if(length(eta) == 0) {eta=upper; mu=0}
@@ -671,6 +932,57 @@ print.uh = function(x, ...) {
 }
 
 # Hazard function
+
+
+
+##'Distributional Functions given a U-shaped Hazard Function
+##'
+##'
+##'Given an object of class \code{uh}:
+##'
+##'\code{hazuh} computes the hazard values;
+##'
+##'\code{chazuh} computes the cumulative hazard values;
+##'
+##'\code{survuh} computes the survival function values;
+##'
+##'\code{denuh} computes the density function values.
+##'
+##'
+##'@aliases hazuh chazuh survuh denuh
+##'@param t time points at which the function is to be evaluated.
+##'@param h an object of class \code{uh}.
+##'@return
+##'
+##'A numeric vector of the function values.
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{Uhaz}}, \code{\link{icendata}}, \code{\link{plot.uh}}
+##'@references
+##'
+##'Wang, Y. and Fani, S. (2018). Nonparametric maximum likelihood
+##' computation of a U-shaped hazard function. \emph{Statistics and
+##' Computing}, \bold{28}, 187-200.
+##'
+##'@keywords function
+##'@examples
+##'
+##'data(ap)
+##'h = Uhaz(icendata(ap), deg=2)$h
+##'hazuh(0:15, h)     # hazard
+##'chazuh(0:15, h)    # cumulative hazard
+##'survuh(0:15, h)    # survival probability
+##'denuh(0:15, h)     # density
+##'
+##'@usage
+##'hazuh(t, h)
+##'chazuh(t, h)
+##'survuh(t, h)
+##'denuh(t, h)
+##' 
+##'@export hazuh
+##'@export chazuh
+##'@export survuh
+##'@export denuh
 
 hazuh = function(t, h) {
   p = h$deg
@@ -721,6 +1033,146 @@ survuh = function(t, h) exp(-chazuh(t, h))
 denuh = function(t, h) hazuh(t, h) * survuh(t, h)
 
 ## plotting functions
+
+
+
+##'Plot Functions for U-shaped Hazard Estimation
+##'
+##'
+##' Functions for plotting various functions in U-shaped hazard estimation
+##' 
+##'\code{plot.Uhaz} and \code{plot.uh} are wrapper functions that can be used
+##'to invoke \code{plot.hazuh}, \code{plot.chazuh}, \code{plot.survuh},
+##'\code{plot.denuh} or \code{plot.graduh}.
+##'
+##'\code{plothazuh} plots a U-shaped hazard function.
+##'
+##'\code{plotchazuh} plots a cumulative hazard function that has a U-shaped
+##'hazard function.
+##'
+##'\code{plotsurvuh} plots the survival function that has a U-shaped hazard
+##'function.
+##'
+##'\code{plotdenuh} plots the density function that has a U-shaped hazard
+##'function.
+##'
+##'\code{plotgraduh} plots the gradient function that has a U-shaped hazard
+##'function.
+##'
+##'
+##'A U-shaped hazard function is given by
+##'
+##'\deqn{h(t) = \alpha + \sum_{j = 1}^k \nu_j(\tau_j - t)_+^p + \sum_{j = 1}^{m} \mu_j (t-\eta_j)_+^p,}{  h(t) = alpha + sum_{j=1}^k nu_j (tau_j - t)_+^p
+##'                + sum_{j=1}^m mu_j (t - eta_j)_+^p,}
+##'
+##'where \eqn{\alpha,\nu_j,\mu_j \ge 0}{alpha, nu_j, mu_j \ge 0},
+##'\eqn{\tau_1 < \cdots < \tau_k \le \eta_1 < \cdots < \eta_m,}{tau_1 < ... < tau_k <= eta_1 < ... < eta_m,} and \eqn{p \ge 0}{p >= 0}.
+##'
+##'@aliases plot.Uhaz plot.uh plothazuh plotchazuh plotsurvuh plotdenuh
+##'plotgraduh
+##'@param x an object of class \code{Uhaz}, i.e., an output of function
+##'\code{Uhaz}, or an object of class \code{uh}..
+##'@param h an object of class \code{uh}.
+##'@param data vector or matrix that stores observations, or an object of class
+##'\code{icendata}.
+##'@param w additional weights/multiplicities for the observations stored in
+##'\code{data}.
+##'@param fn function to be plotted. It can be
+##'
+##'= \code{haz}, for hazard function;
+##'
+##'= \code{chaz}, for cumulative hazard function;
+##'
+##'= \code{den}, for density function;
+##'
+##'= \code{surv}, for survival function;
+##'
+##'= \code{gradient}, for gradient functions.
+##'
+##'@param xlim,ylim numeric vectors of length 2, giving the x and y coordinates
+##'ranges.
+##'@param xlab,ylab x- or y-axis labels.
+##'@param add = \code{TRUE}, adds the curve to the existing plot;
+##'
+##'= \code{FALSE}, plots the curve in a new one.
+##'@param col color used for plotting the curve.
+##'@param lty line type for plotting the curve.
+##'@param lwd line width for plotting the curve.
+##'@param len number of points used to plot a curve.
+##'@param add.knots logical, indicating if knots are also plotted.
+##'@param pch point character/type for plotting knots.
+##'@param vert logical, indicating if grey vertical lines are plotted to show
+##'the interval that separates the two discrete measures.
+##'@param col0 color for gradient function 0, i.e., for the hazard-constant
+##'part, or alpha.
+##'@param col1 color for gradient function 1, i.e., for the hazard-decreasing
+##'part.
+##'@param col2 color for gradient function 1, i.e., for the hazard-increasing
+##'part.
+##'@param order = 0, the gradient functions are plotted;
+##'
+##'= 1, their first derivatives are plotted;
+##'
+##'= 2, their second derivatives are plotted.
+##'@param ... arguments for other graphical parameters (see \code{par}).
+##'@author Yong Wang <yongwang@@auckland.ac.nz>
+##'@seealso \code{\link{icendata}}, \code{\link{uh}}, \code{\link{npsurv}}.
+##'@references
+##'
+##'Wang, Y. and Fani, S. (2018). Nonparametric maximum likelihood
+##' computation of a U-shaped hazard function. \emph{Statistics and
+##' Computing}, \bold{28}, 187-200.
+##'
+##'@keywords function
+##'@examples
+##'
+##'## Angina Pectoris Survival Data
+##'data(ap)
+##'plot(r<-Uhaz(ap))              # hazard function for a convex hazard
+##'plot(r, fn="c")                # cumulative hazard function
+##'plot(r, fn="s")                # survival function
+##'plot(r, fn="d")                # density function
+##'plot(r, ap, fn="g")            # gradient functions
+##'plot(r, ap, fn="g", order=1)   # first derivatives of gradient functions
+##'plot(r, ap, fn="g", order=2)   # second derivatives of gradient functions
+##'
+##'## New Zealand Mortality in 2000
+##'data(nzmort)
+##'i = nzmort$ethnic == "maori"
+##'x = nzmort[i,1:2]                            # Maori mortality
+##'h = Uhaz(x[,1]+0.5, x[,2], deg=2)$h          # smooth U-shaped hazard
+##'plot(h)                        # hazard function
+##'plot(h, fn="d")                # density function
+##'plot(h, fn="s")                # survival function
+##'
+##'x2 = nzmort[!i,1:2]                          # Non-Maori mortality
+##'h2 = Uhaz(x2[,1]+0.5, x2[,2], deg=2)$h
+##'plot(h2, fn="s", add=TRUE, col="green3")
+##'
+##'@usage
+##'\method{plot}{Uhaz}(x, ...)
+##'\method{plot}{uh}(x, data, fn=c("haz","grad","surv","den","chaz"), ...)
+##'plothazuh(h, add=FALSE, col="darkblue", lty=1, xlim, ylim,
+##'          lwd=2, pch=19, len=500, vert=FALSE, add.knots=TRUE,
+##'          xlab="Time", ylab="Hazard", ...)
+##'plotchazuh(h, add=FALSE, lwd=2, len=500, col="darkblue",
+##'           pch=19, add.knots=TRUE, vert=FALSE, xlim, ylim, ...)
+##'plotdenuh(h, add=FALSE, lty=1, lwd=2, col="darkblue",
+##'          add.knots=TRUE, pch=19, ylim, len=500, vert=FALSE, ...)
+##'plotsurvuh(h, add=FALSE, lty=1, lwd=2, len=500, vert=FALSE,
+##'           col="darkblue", pch=19, add.knots=TRUE, xlim, ylim, ...)
+##'plotgraduh(h, data, w=1, len=500, xlim, ylim, vert=TRUE,
+##'           add=FALSE, xlab="Time", ylab="Gradient",
+##'           col0="red3", col1="blue3", col2="green3", order=0, ...)
+##'
+##'@export plot.Uhaz
+##'@export plot.uh
+##'@export plothazuh
+##'@export plotchazuh
+##'@export plotsurvuh
+##'@export plotdenuh
+##'@export plotgraduh
+
 
 plot.Uhaz = function(x, ...) plot(x$h, ...)
 
